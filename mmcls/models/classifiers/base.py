@@ -1,22 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-import warnings
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+from typing import Sequence
 
 import mmcv
 import torch
 import torch.distributed as dist
-from mmcv.runner import BaseModule
+from mmcv.runner import BaseModule, auto_fp16
 
 from mmcls.core.visualization import imshow_infos
-
-# TODO import `auto_fp16` from mmcv and delete them from mmcls
-try:
-    from mmcv.runner import auto_fp16
-except ImportError:
-    warnings.warn('auto_fp16 from mmcls will be deprecated.'
-                  'Please install mmcv>=1.1.4.')
-    from mmcls.core import auto_fp16
 
 
 class BaseClassifier(BaseModule, metaclass=ABCMeta):
@@ -35,13 +27,14 @@ class BaseClassifier(BaseModule, metaclass=ABCMeta):
         return hasattr(self, 'head') and self.head is not None
 
     @abstractmethod
-    def extract_feat(self, imgs):
+    def extract_feat(self, imgs, stage=None):
         pass
 
-    def extract_feats(self, imgs):
-        assert isinstance(imgs, list)
+    def extract_feats(self, imgs, stage=None):
+        assert isinstance(imgs, Sequence)
+        kwargs = {} if stage is None else {'stage': stage}
         for img in imgs:
-            yield self.extract_feat(img)
+            yield self.extract_feat(img, **kwargs)
 
     @abstractmethod
     def forward_train(self, imgs, **kwargs):
